@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squid Collector - Mobile Friendly</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0f1e;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            touch-action: manipulation;
+        }
+        canvas {
+            display: block;
+            margin: auto;
+        }
+        #jumpButton {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            padding: 15px 30px;
+            border: none;
+            background: #FFD700;
+            color: black;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Squid Collector - Tap to Jump!</h1>
+    <p>Score: <span id="score">0</span></p>
+    <p>High Score: <span id="highScore">0</span></p>
+    <canvas id="gameCanvas"></canvas>
+    <button id="jumpButton">Jump</button>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * 0.8;
+
+        // Load images
+        const playerImg = new Image();
+        playerImg.src = "player.png";
+        
+        const obstacleImg = new Image();
+        obstacleImg.src = "obstacle.png";
+        
+        const backgroundImg = new Image();
+        backgroundImg.src = "background.png";
+
+        let player = {
+            x: 100,
+            y: canvas.height / 2,
+            width: 35, // Further reduced hitbox
+            height: 35, // Further reduced hitbox
+            velocityY: 0,
+            gravity: 0.8,
+            jumpPower: -12
+        };
+
+        let obstacles = [];
+        let score = 0;
+        let highScore = 0;
+        let isGameOver = false;
+        const scoreDisplay = document.getElementById("score");
+        const highScoreDisplay = document.getElementById("highScore");
+
+        function drawBackground() {
+            ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+        }
+
+        function drawPlayer() {
+            ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function updatePlayer() {
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            if (player.y < 0) player.y = 0;
+            if (player.y + player.height > canvas.height) isGameOver = true;
+        }
+
+        function generateObstacle(xOffset = 0) {
+            let gapY = Math.random() * (canvas.height - 400) + 100;
+            let gapHeight = 210;
+            let obstacleWidth = 50;
+            let minGapMultiplier = Math.random() < 0.3 ? 4 : Math.floor(Math.random() * (7 - 5 + 1)) + 5;
+            let minGapX = obstacleWidth * minGapMultiplier;
+            let newObstacleX = canvas.width + xOffset;
+
+            obstacles.push({ x: newObstacleX, y: 0, width: obstacleWidth, height: gapY, passed: false });
+            obstacles.push({ x: newObstacleX, y: gapY + gapHeight, width: obstacleWidth, height: canvas.height - gapY - gapHeight, passed: false });
+        }
+
+        function updateObstacles() {
+            if (obstacles.length === 0) {
+                generateObstacle(-canvas.width / 2);
+            }
+            if (canvas.width - obstacles[obstacles.length - 1].x > canvas.width / 2) {
+                generateObstacle();
+            }
+            obstacles.forEach(obstacle => obstacle.x -= 3);
+            obstacles = obstacles.filter(obstacle => obstacle.x + obstacle.width > 0);
+        }
+
+        function checkCollisions() {
+            obstacles.forEach((obstacle, index) => {
+                if (
+                    player.x + 8 < obstacle.x + obstacle.width && // Further adjusted hitbox buffer
+                    player.x + player.width - 8 > obstacle.x && // Further adjusted hitbox buffer
+                    player.y + 8 < obstacle.y + obstacle.height && // Further adjusted hitbox buffer
+                    player.y + player.height - 8 > obstacle.y // Further adjusted hitbox buffer
+                ) {
+                    isGameOver = true;
+                }
+                if (index % 2 === 0 && !obstacle.passed && player.x > obstacle.x + obstacle.width) {
+                    obstacle.passed = true;
+                    score++;
+                    scoreDisplay.textContent = score;
+                    if (score > highScore) {
+                        highScore = score;
+                        highScoreDisplay.textContent = highScore;
+                    }
+                }
+            });
+        }
+
+        function resetGame() {
+            player.y = canvas.height / 2;
+            player.velocityY = 0;
+            obstacles = [];
+            score = 0;
+            isGameOver = false;
+            scoreDisplay.textContent = score;
+            gameLoop();
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawPlayer();
+            drawObstacles();
+            updatePlayer();
+            updateObstacles();
+            checkCollisions();
+            if (isGameOver) {
+                ctx.fillStyle = "white";
+                ctx.font = "30px Arial";
+                ctx.fillText("Game Over - Click Jump to Restart", canvas.width / 3, canvas.height / 2);
+                document.getElementById("jumpButton").addEventListener("click", resetGame, { once: true });
+                return;
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function jump() {
+            if (isGameOver) return;
+            player.velocityY = player.jumpPower;
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.code === "Space") jump();
+        });
+
+        document.addEventListener("touchstart", jump);
+        document.getElementById("jumpButton").addEventListener("click", jump);
+        document.getElementById("jumpButton").addEventListener("touchstart", jump);
+
+        gameLoop();
+    </script>
+</body>
+</html>
