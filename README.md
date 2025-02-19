@@ -2,7 +2,7 @@ md
 # Squiddler DApp 🚀  
 🛠 Status: **In Development** (75%)  
 
-### Features geplant:  
+### Features:  
 ✅ Wallet-Integration  
 ✅ NFT-Features  
 🔄 Liquidity-System (In Progress)  
